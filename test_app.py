@@ -1,5 +1,6 @@
 import json
 
+import app
 from app import extract_solotodo_products
 
 
@@ -7,6 +8,10 @@ def make_next_html(data):
     chunk = '0:' + json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     payload = json.dumps([1, chunk], ensure_ascii=False)
     return f"<html><script>self.__next_f.push({payload})</script></html>"
+
+
+def test_app_exposes_streamlit_main_entrypoint():
+    assert hasattr(app, "main")
 
 
 def test_extracts_every_solotodo_product():

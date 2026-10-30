@@ -753,101 +753,106 @@ def build_images_zip(products):
     return buffer.getvalue()
 
 
-st.set_page_config(page_title="Descargador de fotos de productos", layout="wide")
-st.title("Descargador de imágenes de productos")
-st.caption("Pega una URL de un sitio web o producto y descarga las fotos con sus detalles de nombre, marca, precio, descripción y peso.")
+def main():
+    st.set_page_config(page_title="Descargador de fotos de productos", layout="wide")
+    st.title("Descargador de imágenes de productos")
+    st.caption("Pega una URL de un sitio web o producto y descarga las fotos con sus detalles de nombre, marca, precio, descripción y peso.")
 
-with st.form("scraper_form"):
-    url = st.text_input("URL del sitio o producto", placeholder="https://ejemplo.com/producto/123")
-    submitted = st.form_submit_button("Analizar y descargar imágenes")
+    with st.form("scraper_form"):
+        url = st.text_input("URL del sitio o producto", placeholder="https://ejemplo.com/producto/123")
+        submitted = st.form_submit_button("Analizar y descargar imágenes")
 
-if submitted:
-    if not url:
-        st.warning("Ingresa un enlace válido.")
-    else:
-        try:
-            with st.spinner("Analizando productos e imágenes..."):
-                products = analyze_url(url)
-            if not products:
-                st.info("No se detectaron productos con información suficiente en esa URL.")
-            else:
-                OUTPUT_ROOT.mkdir(exist_ok=True)
-                valid_products = []
-                for product in products:
-                    product["downloaded_files"] = download_images_for_product(product, OUTPUT_ROOT)
-                    if product["downloaded_files"]:
-                        valid_products.append(product)
-                products = valid_products
-                metadata_txt = build_product_metadata_text(products)
-                (OUTPUT_ROOT / "productos_extraidos.txt").write_text(
-                    metadata_txt,
-                    encoding="utf-8",
-                )
-                (OUTPUT_ROOT / "productos_extraidos.json").write_text(
-                    json.dumps(products, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-
-                downloaded_count = sum(len(item["downloaded_files"]) for item in products)
-                st.success(
-                    f"Se identificaron {len(products)} productos y se descargaron "
-                    f"{downloaded_count} imágenes."
-                )
-
-                if downloaded_count:
-                    st.download_button(
-                        label="Descargar imágenes en ZIP",
-                        data=build_images_zip(products),
-                        file_name="imagenes_productos.zip",
-                        mime="application/zip",
-                        type="primary",
+    if submitted:
+        if not url:
+            st.warning("Ingresa un enlace válido.")
+        else:
+            try:
+                with st.spinner("Analizando productos e imágenes..."):
+                    products = analyze_url(url)
+                if not products:
+                    st.info("No se detectaron productos con información suficiente en esa URL.")
+                else:
+                    OUTPUT_ROOT.mkdir(exist_ok=True)
+                    valid_products = []
+                    for product in products:
+                        product["downloaded_files"] = download_images_for_product(product, OUTPUT_ROOT)
+                        if product["downloaded_files"]:
+                            valid_products.append(product)
+                    products = valid_products
+                    metadata_txt = build_product_metadata_text(products)
+                    (OUTPUT_ROOT / "productos_extraidos.txt").write_text(
+                        metadata_txt,
+                        encoding="utf-8",
                     )
-                    st.download_button(
-                        label="Descargar datos (.txt)",
-                        data=metadata_txt,
-                        file_name="productos_extraidos.txt",
-                        mime="text/plain",
+                    (OUTPUT_ROOT / "productos_extraidos.json").write_text(
+                        json.dumps(products, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
                     )
 
-                for product in products:
-                    name = product.get("name") or "Producto sin nombre"
-                    price = product.get("price") or "Sin precio"
-                    brand = product.get("brand") or "Marca no detectada"
-                    weight = product.get("weight") or "Peso no detectado"
-                    description = product.get("description") or "Sin descripción disponible."
-                    image_count = len(product.get("downloaded_files", []))
+                    downloaded_count = sum(len(item["downloaded_files"]) for item in products)
+                    st.success(
+                        f"Se identificaron {len(products)} productos y se descargaron "
+                        f"{downloaded_count} imágenes."
+                    )
 
-                    with st.expander(f"{name} — {price} — {image_count} imagen(es)"):
-                        st.write(f"Marca: {brand}")
-                        st.write(f"Precio: {price}")
-                        st.write(f"Peso: {weight}")
-                        st.write(f"Descripción: {description}")
-                        st.write(f"Ruta de imagen local: {product.get('downloaded_files', [])[0] if product.get('downloaded_files') else 'Sin imagen descargada'}")
-                        images = product.get("images", [])
-                        if images:
-                            cols = st.columns(min(4, len(images)))
-                            for col, img_url in zip(cols, images[:4]):
-                                with col:
-                                    st.image(img_url, width="stretch")
+                    if downloaded_count:
+                        st.download_button(
+                            label="Descargar imágenes en ZIP",
+                            data=build_images_zip(products),
+                            file_name="imagenes_productos.zip",
+                            mime="application/zip",
+                            type="primary",
+                        )
+                        st.download_button(
+                            label="Descargar datos (.txt)",
+                            data=metadata_txt,
+                            file_name="productos_extraidos.txt",
+                            mime="text/plain",
+                        )
 
-                        if product.get("downloaded_files"):
-                            st.write("Imágenes guardadas en:")
-                            for file_path in product["downloaded_files"]:
-                                st.code(file_path)
+                    for product in products:
+                        name = product.get("name") or "Producto sin nombre"
+                        price = product.get("price") or "Sin precio"
+                        brand = product.get("brand") or "Marca no detectada"
+                        weight = product.get("weight") or "Peso no detectado"
+                        description = product.get("description") or "Sin descripción disponible."
+                        image_count = len(product.get("downloaded_files", []))
 
-                st.download_button(
-                    label="Descargar archivo JSON con los resultados",
-                    data=json.dumps(products, ensure_ascii=False, indent=2),
-                    file_name="productos_extraidos.json",
-                    mime="application/json",
-                )
-        except Exception as exc:
-            st.error(f"Ocurrió un error: {exc}")
+                        with st.expander(f"{name} — {price} — {image_count} imagen(es)"):
+                            st.write(f"Marca: {brand}")
+                            st.write(f"Precio: {price}")
+                            st.write(f"Peso: {weight}")
+                            st.write(f"Descripción: {description}")
+                            st.write(f"Ruta de imagen local: {product.get('downloaded_files', [])[0] if product.get('downloaded_files') else 'Sin imagen descargada'}")
+                            images = product.get("images", [])
+                            if images:
+                                cols = st.columns(min(4, len(images)))
+                                for col, img_url in zip(cols, images[:4]):
+                                    with col:
+                                        st.image(img_url, width="stretch")
 
-st.markdown("---")
-st.markdown("### Cómo funciona")
-st.markdown("- Pega una URL de un catálogo o producto.")
-st.markdown("- Se analiza el HTML, JSON-LD y las imágenes del sitio.")
-st.markdown("- Se agrupan las imágenes que pertenecen al mismo producto.")
-st.markdown("- Se almacenan los datos principales: nombre, marca, precio, descripción, peso e imágenes.")
-st.markdown("- Puedes bajar todo en un único archivo ZIP, además del JSON de resultados.")
+                            if product.get("downloaded_files"):
+                                st.write("Imágenes guardadas en:")
+                                for file_path in product["downloaded_files"]:
+                                    st.code(file_path)
+
+                    st.download_button(
+                        label="Descargar archivo JSON con los resultados",
+                        data=json.dumps(products, ensure_ascii=False, indent=2),
+                        file_name="productos_extraidos.json",
+                        mime="application/json",
+                    )
+            except Exception as exc:
+                st.error(f"Ocurrió un error: {exc}")
+
+    st.markdown("---")
+    st.markdown("### Cómo funciona")
+    st.markdown("- Pega una URL de un catálogo o producto.")
+    st.markdown("- Se analiza el HTML, JSON-LD y las imágenes del sitio.")
+    st.markdown("- Se agrupan las imágenes que pertenecen al mismo producto.")
+    st.markdown("- Se almacenan los datos principales: nombre, marca, precio, descripción, peso e imágenes.")
+    st.markdown("- Puedes bajar todo en un único archivo ZIP, además del JSON de resultados.")
+
+
+if __name__ == "__main__":
+    main()

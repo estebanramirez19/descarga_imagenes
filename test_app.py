@@ -1,4 +1,6 @@
 import json
+import tempfile
+from pathlib import Path
 
 import app
 from app import extract_solotodo_products
@@ -12,6 +14,10 @@ def make_next_html(data):
 
 def test_app_exposes_streamlit_main_entrypoint():
     assert hasattr(app, "main")
+
+
+def test_output_root_uses_local_temp_directory():
+    assert str(app.OUTPUT_ROOT).startswith(str(Path(tempfile.gettempdir())))
 
 
 def test_extracts_every_solotodo_product():

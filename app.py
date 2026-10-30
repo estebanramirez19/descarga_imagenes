@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 import re
+import tempfile
 import zipfile
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -16,7 +17,7 @@ HEADERS = {
     "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
 }
 
-OUTPUT_ROOT = Path(__file__).resolve().parent / "downloads"
+OUTPUT_ROOT = Path(tempfile.gettempdir()) / "descarga_imagenes" / "downloads"
 
 
 def clean_text(value):
@@ -712,7 +713,10 @@ def build_product_metadata_text(products):
         for file_path in product.get("downloaded_files", []):
             path = Path(file_path)
             if path.exists():
-                rel_path = path.relative_to(Path(__file__).resolve().parent)
+                try:
+                    rel_path = path.relative_to(Path(__file__).resolve().parent)
+                except ValueError:
+                    rel_path = path
                 img_paths.append(rel_path.as_posix())
 
         lines.append(f"PRODUCTO_{index}")
